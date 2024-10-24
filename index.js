@@ -1,43 +1,37 @@
-const express = require('express');
-const cors = require('cors');
-const crypto = require('crypto');
+const apiUrl = 'https://82874cb7-7cf0-4525-99ad-b92eccae1aaa-00-3bqgt2l7n7jni.picard.replit.dev';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+async function encryptMessage() {
+    try {
+        const message = document.getElementById('message').value;
+        const response = await fetch(`${apiUrl}/encrypt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
 
-const algorithm = 'aes-256-cbc';
-const key = crypto.randomBytes(32);
-const iv = crypto.randomBytes(16);
+        if (!response.ok) throw new Error('Erro na requisição');
+        const data = await response.json();
+        document.getElementById('result').innerText = `Criptografado: ${data.encrypted}\nIV: ${data.iv}`;
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Ocorreu um erro ao criptografar a mensagem.');
+    }
+}
 
-// Rota para criptografar mensagem
-app.post('/encrypt', (req, res) => {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ error: 'Mensagem não fornecida' });
+async function decryptMessage() {
+    try {
+        const [encrypted, iv] = document.getElementById('result').innerText.split('\n').map(line => line.split(': ')[1]);
+        const response = await fetch(`${apiUrl}/decrypt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ encrypted, iv })
+        });
 
-    const cipher = crypto.createCipheriv(algorithm, key, iv);
-    let encrypted = cipher.update(message, 'utf-8', 'hex');
-    encrypted += cipher.final('hex');
-
-    res.json({ encrypted, iv: iv.toString('hex') });
-});
-
-// Rota para descriptografar mensagem
-app.post('/decrypt', (req, res) => {
-    const { encrypted, iv } = req.body;
-    if (!encrypted || !iv) return res.status(400).json({ error: 'Dados incompletos' });
-
-    const decipher = crypto.createDecipheriv(algorithm, key, Buffer.from(iv, 'hex'));
-    let decrypted = decipher.update(encrypted, 'hex', 'utf-8');
-    decrypted += decipher.final('utf-8');
-
-    res.json({ decrypted });
-});
-
-// Rota GET para verificar funcionamento
-app.get('/', (req, res) => {
-    res.send('API funcionando!');
-});
-
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+        if (!response.ok) throw new Error('Erro na requisição');
+        const data = await response.json();
+        document.getElementById('result').innerText = `Descriptografado: ${data.decrypted}`;
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Ocorreu um erro ao descriptografar a mensagem.');
+    }
+}
